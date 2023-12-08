@@ -5,20 +5,19 @@ import {Test, console2} from "forge-std/Test.sol";
 import {KeepyUppy} from "../src/KeepyUppy.sol";
 
 contract KeepyUppyTest is Test {
-    KeepyUppy public counter;
+    KeepyUppy public game;
 
     function setUp() public {
-        counter = new KeepyUppy();
-        counter.setNumber(0);
+        game = new KeepyUppy();
     }
 
-    function test_Increment() public {
-        counter.increment();
-        assertEq(counter.number(), 1);
+    function test_bumpBalloon() public {
+        game.bumpBalloon(1);
+        assertEq(game.storedValue(), 1);
     }
 
-    function testFuzz_SetNumber(uint256 x) public {
-        counter.setNumber(x);
-        assertEq(counter.number(), x);
+    function testFuzz_bumpBalloon(uint256 x) public {
+        game.bumpBalloon(x);
+        assertEq(game.storedValue(), x);
     }
 }
