@@ -69,6 +69,7 @@ $ forge fmt
 
 As mentioned in the header, this is a toy contract for the purposes of exploring Solidity, smart contracts, etc.. There are a few things we want to get out of building this:
 1. **Smart contract development basics**: writing Solidity, deploying a contract, etc - all the things you get from doing the basics.
+1. **Full-stack contracty stuff**: We're going to want a UI to interact with our contract, so this is a great way to play with that (this is sort of an extention to the development basics).
 1. **Multi-party interaction**: most contracts are multi-player games, in a way. This is explicitly a game that can be played by multiple actors.
 1. **Multiple chains**: we'll use this as an avenue to explore deploying to multiple L1/L2 chains, possibly with communication between them.
 1. **Contract optimization**: The contract logic here should be simple enough that we can play with some smart contract optimization.
