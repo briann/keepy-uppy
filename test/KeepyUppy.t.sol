@@ -2,13 +2,13 @@
 pragma solidity ^0.8.13;
 
 import {Test, console2} from "forge-std/Test.sol";
-import {Counter} from "../src/Counter.sol";
+import {KeepyUppy} from "../src/KeepyUppy.sol";
 
-contract CounterTest is Test {
-    Counter public counter;
+contract KeepyUppyTest is Test {
+    KeepyUppy public counter;
 
     function setUp() public {
-        counter = new Counter();
+        counter = new KeepyUppy();
         counter.setNumber(0);
     }
 
