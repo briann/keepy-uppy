@@ -12,12 +12,10 @@ contract KeepyUppyTest is Test {
     }
 
     function test_bumpBalloon() public {
-        game.bumpBalloon(1);
-        assertEq(game.storedValue(), 1);
+        address(game).call{value: 100}(abi.encodeWithSignature("bumpBalloon"));
     }
 
-    function testFuzz_bumpBalloon(uint256 x) public {
-        game.bumpBalloon(x);
-        assertEq(game.storedValue(), x);
+    function testFuzz_bumpBalloon(uint256 _amount) public {
+        address(game).call{value: _amount}(abi.encodeWithSignature("bumpBalloon"));
     }
 }

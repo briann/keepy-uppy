@@ -2,9 +2,11 @@
 pragma solidity ^0.8.13;
 
 contract KeepyUppy {
-    uint256 public storedValue = 0;
 
-    function bumpBalloon(uint256 bumpStrength) public {
-        storedValue += bumpStrength;
+    address public lastBumper;
+
+    function bumpBalloon() external payable {
+        require(msg.value > 0);
+        lastBumper = msg.sender;
     }
 }
