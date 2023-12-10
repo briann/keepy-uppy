@@ -6,16 +6,23 @@ import {KeepyUppy} from "../src/KeepyUppy.sol";
 
 contract KeepyUppyTest is Test {
     KeepyUppy public game;
+    address player;
 
     function setUp() public {
+        player = vm.addr(1);
         game = new KeepyUppy();
     }
 
     function test_bumpBalloon() public {
-        address(game).call{value: 100}(abi.encodeWithSignature("bumpBalloon"));
+        vm.prank(player);
+        vm.deal(player, 1 ether);
+        game.bumpBalloon{value: 1 ether}();
     }
 
     function testFuzz_bumpBalloon(uint256 _amount) public {
-        address(game).call{value: _amount}(abi.encodeWithSignature("bumpBalloon"));
+        vm.assume(_amount > 0);
+        vm.prank(player);
+        vm.deal(player, _amount);
+        game.bumpBalloon{value: _amount}();
     }
 }
