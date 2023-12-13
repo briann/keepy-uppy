@@ -2,7 +2,8 @@
 pragma solidity ^0.8.13;
 
 contract KeepyUppy {
-    uint256 public constant ACCELERATION_WEI_PER_BLOCK = 10;
+    uint256 public constant ACCELERATION_PER_BLOCK = 10 wei;
+    uint256 public constant MAX_VELOCITY = 1 ether;
 
     address public owner;
 
@@ -33,9 +34,8 @@ contract KeepyUppy {
     }
 
     function updateState() external onlyOwner {
-        (uint256 fallDistance, uint256 newVelocity) = calculateFallDistanceAndNewVelocity(
-            velocity, block.number - lastUpdateBlockNumber, ACCELERATION_WEI_PER_BLOCK
-        );
+        (uint256 fallDistance, uint256 newVelocity) =
+            calculateFallDistanceAndNewVelocity(velocity, block.number - lastUpdateBlockNumber, ACCELERATION_PER_BLOCK);
         if (fallDistance > balloonHeight) {
             endGame();
         } else {
@@ -50,7 +50,14 @@ contract KeepyUppy {
         pure
         returns (uint256 fallDistance, uint256 newVelocity)
     {
+        if (initialVelocity >= MAX_VELOCITY) {
+            initialVelocity = MAX_VELOCITY;
+        }
+        // TODO: Fix issue where blocksElapsed can also cause overflow.
         newVelocity = initialVelocity + (blocksElapsed * acceleration);
+        if (newVelocity > MAX_VELOCITY) {
+            newVelocity = MAX_VELOCITY;
+        }
         fallDistance = uint256((initialVelocity + newVelocity) * blocksElapsed / 2);
     }
 

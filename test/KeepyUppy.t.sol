@@ -140,8 +140,21 @@ contract KeepyUppyTest is Test {
         assertEq(newVelocity, 955);
     }
 
-    function test_calculateFallDistanceAndNewVelocity_WithOverflowSituations() public {
-        // TODO
+    function test_calculateFallDistanceAndNewVelocity_WithMaxVelocity() public {
+        uint256 fallDistance;
+        uint256 newVelocity;
+
+        (fallDistance, newVelocity) = game.exposed_calculateFallDistanceAndNewVelocity(UINT256_MAX - 1, 1, 100);
+        assertEq(fallDistance, game.MAX_VELOCITY());
+        assertEq(newVelocity, game.MAX_VELOCITY());
+
+        (fallDistance, newVelocity) = game.exposed_calculateFallDistanceAndNewVelocity(game.MAX_VELOCITY() - 1, 1, 2);
+        assertEq(fallDistance, game.MAX_VELOCITY() - 1);
+        assertEq(newVelocity, game.MAX_VELOCITY());
+
+        (fallDistance, newVelocity) = game.exposed_calculateFallDistanceAndNewVelocity(game.MAX_VELOCITY() - 1, 2, 1);
+        assertEq(fallDistance, game.MAX_VELOCITY() * 2 - 1);
+        assertEq(newVelocity, game.MAX_VELOCITY());
     }
 
     function test_endGame_PaysOutAndResetsState() public {
