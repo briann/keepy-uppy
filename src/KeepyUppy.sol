@@ -34,6 +34,8 @@ contract KeepyUppy {
     }
 
     function updateState() external onlyOwner {
+        // TODO: If the number of blocks elapsed has been too long, we should return money back because we weren't
+        // keeping the game clock ticking as participants expect.
         (uint256 fallDistance, uint256 newVelocity) =
             calculateFallDistanceAndNewVelocity(velocity, block.number - lastUpdateBlockNumber, ACCELERATION_PER_BLOCK);
         if (fallDistance > balloonHeight) {
@@ -45,20 +47,47 @@ contract KeepyUppy {
         }
     }
 
+    // TODO: Add a function to return funds if blocks elapsed has exceeded limits.
+
     function calculateFallDistanceAndNewVelocity(uint256 initialVelocity, uint256 blocksElapsed, uint256 acceleration)
         internal
         pure
         returns (uint256 fallDistance, uint256 newVelocity)
     {
-        if (initialVelocity >= MAX_VELOCITY) {
-            initialVelocity = MAX_VELOCITY;
+        // TODO: Remove all of this blocks batching stuff because we'll enforce the need to updateState() regularly.
+        // We compute velocity and fall distance in batches to avoid overflow.
+        uint256 maxBlocksPerComputeBatch = ((2 ** 256) - 1) / MAX_VELOCITY;
+        if (acceleration > 0) {
+            maxBlocksPerComputeBatch = maxBlocksPerComputeBatch / acceleration;
         }
-        // TODO: Fix issue where blocksElapsed can also cause overflow.
-        newVelocity = initialVelocity + (blocksElapsed * acceleration);
-        if (newVelocity > MAX_VELOCITY) {
-            newVelocity = MAX_VELOCITY;
+        uint256 computeBatchesRemaining = blocksElapsed / maxBlocksPerComputeBatch;
+        if (blocksElapsed % maxBlocksPerComputeBatch != 0) {
+            computeBatchesRemaining++;
         }
-        fallDistance = uint256((initialVelocity + newVelocity) * blocksElapsed / 2);
+
+        fallDistance = 0;
+        while (computeBatchesRemaining > 0) {
+            uint256 blocksInBatch = blocksElapsed;
+            if (maxBlocksPerComputeBatch < blocksElapsed) {
+                blocksInBatch = maxBlocksPerComputeBatch;
+            }
+            if (computeBatchesRemaining == 1 && blocksElapsed % maxBlocksPerComputeBatch != 0) {
+                blocksInBatch = blocksElapsed % maxBlocksPerComputeBatch;
+            }
+            if (initialVelocity >= MAX_VELOCITY) {
+                initialVelocity = MAX_VELOCITY;
+            }
+            newVelocity = initialVelocity + (blocksInBatch * acceleration);
+            if (newVelocity > MAX_VELOCITY) {
+                newVelocity = MAX_VELOCITY;
+            }
+            // TODO: Another possible overflow situation.
+            fallDistance += uint256((initialVelocity + newVelocity) * blocksInBatch / 2);
+            computeBatchesRemaining--;
+            if (computeBatchesRemaining > 0) {
+                initialVelocity = newVelocity;
+            }
+        }
     }
 
     function endGame() internal onlyOwner {

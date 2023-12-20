@@ -157,6 +157,27 @@ contract KeepyUppyTest is Test {
         assertEq(newVelocity, game.MAX_VELOCITY());
     }
 
+    function test_calculateFallDistanceAndNewVelocity_WithNoAcceleration() public {
+        uint256 fallDistance;
+        uint256 newVelocity;
+
+        (fallDistance, newVelocity) = game.exposed_calculateFallDistanceAndNewVelocity(100, 5, 0);
+        assertEq(fallDistance, 500);
+        assertEq(newVelocity, 100);
+    }
+
+    function test_calculateFallDistanceAndNewVelocity_WithExcessiveBlocksSinceLastUpdate() public {
+        uint256 fallDistance;
+        uint256 newVelocity;
+
+        uint256 testAcceleration = 100;
+        uint256 lotsOfBlocks = (UINT256_MAX - 1) / game.MAX_VELOCITY() / testAcceleration * 2 + 1;
+        (fallDistance, newVelocity) =
+            game.exposed_calculateFallDistanceAndNewVelocity(UINT256_MAX - 1, lotsOfBlocks, testAcceleration);
+        assertEq(fallDistance, 2315841784746323908471419700173758157065399693312811280789000000000000000000);
+        assertEq(newVelocity, game.MAX_VELOCITY());
+    }
+
     function test_endGame_PaysOutAndResetsState() public {
         address player = vm.addr(1);
         uint256 amount = 1 ether;
