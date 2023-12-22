@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-contract KeepyUppy {
+import {console2} from "lib/forge-std/src/console2.sol";
+import {EnumerableMap} from "lib/openzeppelin-contracts/contracts/utils/structs/EnumerableMap.sol";
+import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+
+contract KeepyUppy is ReentrancyGuard {
     uint256 public constant ACCELERATION_PER_BLOCK = 10 wei;
     uint256 public constant MAX_VELOCITY = 1 ether;
     uint256 public constant LONGEST_ALLOWABLE_BLOCK_CADENCE_FOR_UPDATES = 100;
@@ -15,8 +19,13 @@ contract KeepyUppy {
     uint256 public velocity = 0;
     uint256 public balloonHeight = 0;
 
+    // Array of games played, each game is represented by a map of players to their total contributions to the game.
+    EnumerableMap.AddressToUintMap[] private gamePlayerHistory;
+    uint256 private currentGameIndex;
+
     constructor() {
         owner = msg.sender;
+        gamePlayerHistory.push();
     }
 
     modifier onlyOwner() {
@@ -29,9 +38,18 @@ contract KeepyUppy {
         lastBumper = msg.sender;
         lastBumpBlockNumber = block.number;
         lastUpdateBlockNumber = block.number;
+
         // Instantly transport the balloon into the "air".
         velocity = 0;
         balloonHeight = msg.value;
+
+        // Record contributions for this player.
+        EnumerableMap.AddressToUintMap storage currentGameContributions = gamePlayerHistory[currentGameIndex];
+        uint256 contributions = 0;
+        if (EnumerableMap.contains(currentGameContributions, msg.sender)) {
+            contributions = EnumerableMap.get(currentGameContributions, msg.sender);
+        }
+        EnumerableMap.set(currentGameContributions, msg.sender, contributions + msg.value);
     }
 
     function updateState() external onlyOwner {
@@ -48,7 +66,20 @@ contract KeepyUppy {
         }
     }
 
-    // TODO: Add a function to return funds if blocks elapsed has exceeded limits.
+    function refundPlayers() external nonReentrant {
+        uint256 blocksElapsed = block.number - lastUpdateBlockNumber;
+        require(blocksElapsed > LONGEST_ALLOWABLE_BLOCK_CADENCE_FOR_UPDATES);
+        EnumerableMap.AddressToUintMap storage currentGameContributions = gamePlayerHistory[currentGameIndex];
+        for (uint256 i = 0; i < EnumerableMap.length(currentGameContributions); i++) {
+            (address player, uint256 totalContributions) = EnumerableMap.at(currentGameContributions, i);
+            // TODO: Gas fees here need to be considered.
+            (bool success,) = player.call{value: totalContributions}("");
+            if (!success) {
+                console2.log("Failed to refund ", player, " amount of ", totalContributions);
+            }
+        }
+        resetGameState();
+    }
 
     function calculateFallDistanceAndNewVelocity(uint256 initialVelocity, uint256 blocksElapsed, uint256 acceleration)
         internal
@@ -67,6 +98,7 @@ contract KeepyUppy {
     }
 
     function endGame() internal onlyOwner {
+        // TODO: Change to call()
         payable(lastBumper).transfer(address(this).balance);
         resetGameState();
     }
@@ -77,5 +109,7 @@ contract KeepyUppy {
         lastUpdateBlockNumber = 0;
         velocity = 0;
         balloonHeight = 0;
+        gamePlayerHistory.push();
+        currentGameIndex++;
     }
 }

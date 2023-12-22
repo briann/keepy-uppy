@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Test, console2} from "lib/forge-std/src/Test.sol";
-import {KeepyUppy} from "../src/KeepyUppy.sol";
+import {KeepyUppy} from "src/KeepyUppy.sol";
 
 contract KeepyUppyHarness is KeepyUppy {
     function exposed_calculateFallDistanceAndNewVelocity(
