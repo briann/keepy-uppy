@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 contract KeepyUppy {
     uint256 public constant ACCELERATION_PER_BLOCK = 10 wei;
     uint256 public constant MAX_VELOCITY = 1 ether;
+    uint256 public constant LONGEST_ALLOWABLE_BLOCK_CADENCE_FOR_UPDATES = 100;
 
     address public owner;
 
@@ -54,40 +55,15 @@ contract KeepyUppy {
         pure
         returns (uint256 fallDistance, uint256 newVelocity)
     {
-        // TODO: Remove all of this blocks batching stuff because we'll enforce the need to updateState() regularly.
-        // We compute velocity and fall distance in batches to avoid overflow.
-        uint256 maxBlocksPerComputeBatch = ((2 ** 256) - 1) / MAX_VELOCITY;
-        if (acceleration > 0) {
-            maxBlocksPerComputeBatch = maxBlocksPerComputeBatch / acceleration;
+        require(blocksElapsed <= LONGEST_ALLOWABLE_BLOCK_CADENCE_FOR_UPDATES);
+        if (initialVelocity >= MAX_VELOCITY) {
+            initialVelocity = MAX_VELOCITY;
         }
-        uint256 computeBatchesRemaining = blocksElapsed / maxBlocksPerComputeBatch;
-        if (blocksElapsed % maxBlocksPerComputeBatch != 0) {
-            computeBatchesRemaining++;
+        newVelocity = initialVelocity + (blocksElapsed * acceleration);
+        if (newVelocity > MAX_VELOCITY) {
+            newVelocity = MAX_VELOCITY;
         }
-
-        fallDistance = 0;
-        while (computeBatchesRemaining > 0) {
-            uint256 blocksInBatch = blocksElapsed;
-            if (maxBlocksPerComputeBatch < blocksElapsed) {
-                blocksInBatch = maxBlocksPerComputeBatch;
-            }
-            if (computeBatchesRemaining == 1 && blocksElapsed % maxBlocksPerComputeBatch != 0) {
-                blocksInBatch = blocksElapsed % maxBlocksPerComputeBatch;
-            }
-            if (initialVelocity >= MAX_VELOCITY) {
-                initialVelocity = MAX_VELOCITY;
-            }
-            newVelocity = initialVelocity + (blocksInBatch * acceleration);
-            if (newVelocity > MAX_VELOCITY) {
-                newVelocity = MAX_VELOCITY;
-            }
-            // TODO: Another possible overflow situation.
-            fallDistance += uint256((initialVelocity + newVelocity) * blocksInBatch / 2);
-            computeBatchesRemaining--;
-            if (computeBatchesRemaining > 0) {
-                initialVelocity = newVelocity;
-            }
-        }
+        fallDistance = uint256((initialVelocity + newVelocity) * blocksElapsed / 2);
     }
 
     function endGame() internal onlyOwner {

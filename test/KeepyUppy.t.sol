@@ -166,16 +166,9 @@ contract KeepyUppyTest is Test {
         assertEq(newVelocity, 100);
     }
 
-    function test_calculateFallDistanceAndNewVelocity_WithExcessiveBlocksSinceLastUpdate() public {
-        uint256 fallDistance;
-        uint256 newVelocity;
-
-        uint256 testAcceleration = 100;
-        uint256 lotsOfBlocks = (UINT256_MAX - 1) / game.MAX_VELOCITY() / testAcceleration * 2 + 1;
-        (fallDistance, newVelocity) =
-            game.exposed_calculateFallDistanceAndNewVelocity(UINT256_MAX - 1, lotsOfBlocks, testAcceleration);
-        assertEq(fallDistance, 2315841784746323908471419700173758157065399693312811280789000000000000000000);
-        assertEq(newVelocity, game.MAX_VELOCITY());
+    function test_calculateFallDistanceAndNewVelocity_WithExcessiveBlocksSinceLastUpdate_ShouldRevert() public {
+        vm.expectRevert();
+        game.exposed_calculateFallDistanceAndNewVelocity(0, UINT256_MAX - 1, 0);
     }
 
     function test_endGame_PaysOutAndResetsState() public {
@@ -195,7 +188,7 @@ contract KeepyUppyTest is Test {
         assertEq(game.lastBumper(), address(0));
     }
 
-    function test_endGame_NonOwnerCallingShouldRevert() public {
+    function test_endGame_NonOwnerCalling_ShouldRevert() public {
         vm.prank(vm.addr(2));
         vm.expectRevert();
         game.exposed_endGame();
