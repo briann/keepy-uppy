@@ -32,6 +32,14 @@ contract KeepyUppyTest is Test {
         game.bumpBalloon{value: _amount}();
     }
 
+    function assertGameStateIsReset() private {
+        assertEq(game.lastBumper(), address(0));
+        assertEq(game.lastBumpBlockNumber(), 0);
+        assertEq(game.lastUpdateBlockNumber(), 0);
+        assertEq(game.velocity(), 0);
+        assertEq(game.balloonHeight(), 0);
+    }
+
     function test_bumpBalloon_IncreasesContractBalance() public {
         address player = vm.addr(1);
         uint256 amount = 1 ether;
@@ -139,11 +147,7 @@ contract KeepyUppyTest is Test {
         assertEq(player2.balance, 1 ether);
 
         // Game state should be reset.
-        assertEq(game.lastBumper(), address(0));
-        assertEq(game.lastBumpBlockNumber(), 0);
-        assertEq(game.lastUpdateBlockNumber(), 0);
-        assertEq(game.velocity(), 0);
-        assertEq(game.balloonHeight(), 0);
+        assertGameStateIsReset();
     }
 
     function test_calculateFallDistanceAndNewVelocity() public {
@@ -227,10 +231,7 @@ contract KeepyUppyTest is Test {
         // Asserts
         assertEq(address(game).balance, 0);
         assertEq(player.balance, 1 ether);
-        assertEq(game.velocity(), 0);
-        assertEq(game.balloonHeight(), 0);
-        assertEq(game.lastBumpBlockNumber(), 0);
-        assertEq(game.lastBumper(), address(0));
+        assertGameStateIsReset();
     }
 
     function test_endGame_NonOwnerCalling_ShouldRevert() public {
