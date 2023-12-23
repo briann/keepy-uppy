@@ -26,6 +26,7 @@ contract KeepyUppyTest is Test {
     }
 
     function playerBumpsBalloon(address _player, uint256 _amount) private returns (uint256) {
+        // TODO: I shouldn't hardcode a blockNumber here. Update usages.
         return playerBumpsBalloon(_player, _amount, 100);
     }
 
@@ -98,6 +99,66 @@ contract KeepyUppyTest is Test {
         vm.prank(vm.addr(2));
         vm.expectRevert();
         game.updateState();
+    }
+
+    function test_refundPlayers() public {
+        address player1 = vm.addr(1);
+        address player2 = vm.addr(2);
+        uint256 lastGameUpdateBlock = 0;
+
+        // Player 1 bumps balloon by 100 ETH.
+        vm.roll(lastGameUpdateBlock);
+        vm.deal(player1, 100 ether);
+        vm.prank(player1);
+        game.bumpBalloon{value: 100 ether}();
+
+        // Refunds should not be allowed in the same block.
+        vm.expectRevert();
+        game.refundPlayers();
+        assertEq(player1.balance, 0);
+        assertEq(player2.balance, 0);
+
+        // Update state.
+        lastGameUpdateBlock++;
+        vm.roll(lastGameUpdateBlock);
+        game.updateState();
+
+        // Player 2 bumps balloon by 1 ETH.
+        vm.roll(lastGameUpdateBlock + 1);
+        vm.deal(player2, 1 ether);
+        vm.prank(player2);
+        game.bumpBalloon{value: 1 ether}();
+
+        // Update state
+        lastGameUpdateBlock++;
+        game.updateState();
+
+        // Refunds should not be allowed in the subsequent block.
+        vm.roll(lastGameUpdateBlock + 1);
+        vm.expectRevert();
+        game.refundPlayers();
+        assertEq(player1.balance, 0);
+        assertEq(player2.balance, 0);
+
+        // Refunds should not be allowed at the limit.
+        vm.roll(lastGameUpdateBlock + game.LONGEST_ALLOWABLE_BLOCK_CADENCE_FOR_UPDATES());
+        vm.expectRevert();
+        game.refundPlayers();
+        assertEq(player1.balance, 0);
+        assertEq(player2.balance, 0);
+
+        // Refunds should be allowed after limit passed.
+        vm.roll(lastGameUpdateBlock + game.LONGEST_ALLOWABLE_BLOCK_CADENCE_FOR_UPDATES() + 1);
+        game.refundPlayers();
+        assertEq(player1.balance, 100 ether);
+        assertEq(player2.balance, 1 ether);
+
+        // Game state should be reset.
+        assertEq(game.lastBumper(), address(0));
+        assertEq(game.lastBumpBlockNumber(), 0);
+        assertEq(game.lastUpdateBlockNumber(), 0);
+        assertEq(game.velocity(), 0);
+        assertEq(game.balloonHeight(), 0);
     }
 
     function test_calculateFallDistanceAndNewVelocity() public {
