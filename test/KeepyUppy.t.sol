@@ -25,72 +25,63 @@ contract KeepyUppyTest is Test {
         game = new KeepyUppyHarness();
     }
 
-    function playerBumpsBalloon(address _player, uint256 _amount) private returns (uint256) {
-        // TODO: I shouldn't hardcode a blockNumber here. Update usages.
-        return playerBumpsBalloon(_player, _amount, 100);
-    }
-
-    function playerBumpsBalloon(address _player, uint256 _amount, uint256 _blockNumber) private returns (uint256) {
-        vm.prank(_player);
+    function playerBumpsBalloon(address _player, uint256 _amount, uint256 _blockNumber) private {
         vm.deal(_player, _amount);
         vm.roll(_blockNumber);
+        vm.prank(_player);
         game.bumpBalloon{value: _amount}();
-        return _blockNumber;
     }
 
     function test_bumpBalloon_IncreasesContractBalance() public {
         address player = vm.addr(1);
         uint256 amount = 1 ether;
-        uint256 blockNumber = playerBumpsBalloon(player, amount);
-        vm.roll(blockNumber + 1);
+        playerBumpsBalloon(player, amount, 1);
+        vm.roll(2);
 
         // Asserts
         assertEq(address(game).balance, amount);
         assertEq(game.lastBumper(), player);
         assertEq(game.balloonHeight(), amount);
-        assertEq(game.lastBumpBlockNumber(), blockNumber);
+        assertEq(game.lastBumpBlockNumber(), 1);
     }
 
     function testFuzz_bumpBalloon_IncreasesContractBalance(uint256 amount) public {
         vm.assume(amount > 0);
         address player = vm.addr(1);
-        uint256 blockNumber = playerBumpsBalloon(player, amount);
-        vm.roll(blockNumber + 1);
+        playerBumpsBalloon(player, amount, 1);
+        vm.roll(2);
 
         // Asserts
         assertEq(address(game).balance, amount);
         assertEq(game.lastBumper(), player);
         assertEq(game.balloonHeight(), amount);
-        assertEq(game.lastBumpBlockNumber(), blockNumber);
+        assertEq(game.lastBumpBlockNumber(), 1);
     }
 
     function test_updateState_BlockTimeMovesBalloonDown() public {
         address player = vm.addr(1);
         uint256 amount = 1 ether;
-        uint256 blockNumber = playerBumpsBalloon(player, amount);
+        uint256 blockNumberOfBump = 1;
+        playerBumpsBalloon(player, amount, blockNumberOfBump);
         assertEq(game.balloonHeight(), amount);
 
         // 1 block elapsed since bump
-        blockNumber++;
-        vm.roll(blockNumber);
+        vm.roll(blockNumberOfBump + 1);
         game.updateState();
         assertEq(game.balloonHeight(), amount - 5);
 
         // 2 blocks elapsed since bump
-        blockNumber++;
-        vm.roll(blockNumber);
+        vm.roll(blockNumberOfBump + 2);
         game.updateState();
         assertEq(game.balloonHeight(), amount - 20);
 
         // 3 blocks elapsed since bump
-        blockNumber++;
-        vm.roll(blockNumber);
+        vm.roll(blockNumberOfBump + 3);
         game.updateState();
         assertEq(game.balloonHeight(), amount - 45);
 
         // 100 blocks elapsed since bump
-        blockNumber = blockNumber + 97;
-        vm.roll(blockNumber);
+        vm.roll(blockNumberOfBump + 100);
         game.updateState();
         assertEq(game.balloonHeight(), amount - 50000);
     }
@@ -107,10 +98,7 @@ contract KeepyUppyTest is Test {
         uint256 lastGameUpdateBlock = 0;
 
         // Player 1 bumps balloon by 100 ETH.
-        vm.roll(lastGameUpdateBlock);
-        vm.deal(player1, 100 ether);
-        vm.prank(player1);
-        game.bumpBalloon{value: 100 ether}();
+        playerBumpsBalloon(player1, 100 ether, lastGameUpdateBlock);
 
         // Refunds should not be allowed in the same block.
         vm.expectRevert();
@@ -124,10 +112,7 @@ contract KeepyUppyTest is Test {
         game.updateState();
 
         // Player 2 bumps balloon by 1 ETH.
-        vm.roll(lastGameUpdateBlock + 1);
-        vm.deal(player2, 1 ether);
-        vm.prank(player2);
-        game.bumpBalloon{value: 1 ether}();
+        playerBumpsBalloon(player2, 1 ether, lastGameUpdateBlock + 1);
 
         // Update state
         lastGameUpdateBlock++;
@@ -236,8 +221,7 @@ contract KeepyUppyTest is Test {
         address player = vm.addr(1);
         uint256 amount = 1 ether;
 
-        uint256 blockNumber = playerBumpsBalloon(player, amount);
-        vm.roll(blockNumber + 1);
+        playerBumpsBalloon(player, amount, 1);
         game.exposed_endGame();
 
         // Asserts
