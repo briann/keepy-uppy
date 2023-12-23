@@ -53,16 +53,20 @@ contract KeepyUppy is ReentrancyGuard {
     }
 
     function updateState() external onlyOwner {
-        // TODO: If the number of blocks elapsed has been too long, we should return money back because we weren't
-        // keeping the game clock ticking as participants expect.
-        (uint256 fallDistance, uint256 newVelocity) =
-            calculateFallDistanceAndNewVelocity(velocity, block.number - lastUpdateBlockNumber, ACCELERATION_PER_BLOCK);
-        if (fallDistance > balloonHeight) {
-            endGame();
+        uint256 blocksElapsed = block.number - lastUpdateBlockNumber;
+        if (blocksElapsed > LONGEST_ALLOWABLE_BLOCK_CADENCE_FOR_UPDATES) {
+            this.refundPlayers();
         } else {
-            lastUpdateBlockNumber = block.number;
-            velocity = newVelocity;
-            balloonHeight -= fallDistance;
+            (uint256 fallDistance, uint256 newVelocity) = calculateFallDistanceAndNewVelocity(
+                velocity, block.number - lastUpdateBlockNumber, ACCELERATION_PER_BLOCK
+            );
+            if (fallDistance > balloonHeight) {
+                endGame();
+            } else {
+                lastUpdateBlockNumber = block.number;
+                velocity = newVelocity;
+                balloonHeight -= fallDistance;
+            }
         }
     }
 

@@ -108,6 +108,25 @@ contract KeepyUppyTest is Test {
         game.updateState();
     }
 
+    function test_updateState_CallRefundPlayersIfTooLongSinceLastUpdate() public {
+        address player = vm.addr(1);
+        uint256 amount = 1 ether;
+        uint256 blockNumberOfBump = 1;
+        playerBumpsBalloon(player, amount, blockNumberOfBump);
+        assertEq(game.balloonHeight(), amount);
+
+        // 1 block elapsed since bump
+        vm.roll(blockNumberOfBump + 1);
+        game.updateState();
+        assertEq(game.balloonHeight(), amount - 5);
+
+        // This should refund the player and reset state.
+        vm.roll(blockNumberOfBump + 1 + game.LONGEST_ALLOWABLE_BLOCK_CADENCE_FOR_UPDATES() + 1);
+        game.updateState();
+        assertEq(player.balance, 1 ether);
+        assertGameStateIsReset();
+    }
+
     // refundPlayers()
 
     function test_refundPlayers_NotAllowedWithinUpdateCadence() public {
