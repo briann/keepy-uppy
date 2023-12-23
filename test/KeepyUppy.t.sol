@@ -25,6 +25,8 @@ contract KeepyUppyTest is Test {
         game = new KeepyUppyHarness();
     }
 
+    // Utilities
+
     function playerBumpsBalloon(address _player, uint256 _amount, uint256 _blockNumber) private {
         vm.deal(_player, _amount);
         vm.roll(_blockNumber);
@@ -39,6 +41,10 @@ contract KeepyUppyTest is Test {
         assertEq(game.velocity(), 0);
         assertEq(game.balloonHeight(), 0);
     }
+
+    // Tests
+
+    // bumpBalloon()
 
     function test_bumpBalloon_IncreasesContractBalance() public {
         address player = vm.addr(1);
@@ -65,6 +71,8 @@ contract KeepyUppyTest is Test {
         assertEq(game.balloonHeight(), amount);
         assertEq(game.lastBumpBlockNumber(), 1);
     }
+
+    // updateState()
 
     function test_updateState_BlockTimeMovesBalloonDown() public {
         address player = vm.addr(1);
@@ -100,7 +108,9 @@ contract KeepyUppyTest is Test {
         game.updateState();
     }
 
-    function test_refundPlayers() public {
+    // refundPlayers()
+
+    function test_refundPlayers_NotAllowedWithinUpdateCadence() public {
         address player1 = vm.addr(1);
         address player2 = vm.addr(2);
         uint256 lastGameUpdateBlock = 0;
@@ -139,6 +149,22 @@ contract KeepyUppyTest is Test {
         game.refundPlayers();
         assertEq(player1.balance, 0);
         assertEq(player2.balance, 0);
+    }
+
+    function test_refundPlayers_AllowedAfterUpdateCadencePassed() public {
+        address player1 = vm.addr(1);
+        address player2 = vm.addr(2);
+        uint256 lastGameUpdateBlock = 0;
+
+        // Player 1 bumps balloon by 100 ETH.
+        playerBumpsBalloon(player1, 100 ether, lastGameUpdateBlock);
+
+        // Player 2 bumps balloon by 1 ETH.
+        playerBumpsBalloon(player2, 1 ether, lastGameUpdateBlock);
+
+        // Update state
+        lastGameUpdateBlock++;
+        game.updateState();
 
         // Refunds should be allowed after limit passed.
         vm.roll(lastGameUpdateBlock + game.LONGEST_ALLOWABLE_BLOCK_CADENCE_FOR_UPDATES() + 1);
@@ -150,11 +176,11 @@ contract KeepyUppyTest is Test {
         assertGameStateIsReset();
     }
 
-    function test_calculateFallDistanceAndNewVelocity() public {
+    // calculateFallDistanceAndNewVelocity()
+
+    function test_calculateFallDistanceAndNewVelocity_WithZeroVelocity() public {
         uint256 fallDistance;
         uint256 newVelocity;
-
-        // Basic calculations with zero initial velocity.
 
         (fallDistance, newVelocity) = game.exposed_calculateFallDistanceAndNewVelocity(0, 1, 9);
         assertEq(fallDistance, 4);
@@ -171,8 +197,12 @@ contract KeepyUppyTest is Test {
         (fallDistance, newVelocity) = game.exposed_calculateFallDistanceAndNewVelocity(0, 100, 9);
         assertEq(fallDistance, 45000);
         assertEq(newVelocity, 900);
+    }
 
-        // Calculations with some initial velocity.
+    function test_calculateFallDistanceAndNewVelocity_WithSomeInitialVelocity() public {
+        uint256 fallDistance;
+        uint256 newVelocity;
+
         (fallDistance, newVelocity) = game.exposed_calculateFallDistanceAndNewVelocity(55, 1, 9);
         assertEq(fallDistance, 59);
         assertEq(newVelocity, 64);
@@ -220,6 +250,8 @@ contract KeepyUppyTest is Test {
         vm.expectRevert();
         game.exposed_calculateFallDistanceAndNewVelocity(0, UINT256_MAX - 1, 0);
     }
+
+    // endGame()
 
     function test_endGame_PaysOutAndResetsState() public {
         address player = vm.addr(1);
