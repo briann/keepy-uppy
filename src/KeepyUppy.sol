@@ -8,7 +8,6 @@ import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/Reentr
 contract KeepyUppy is ReentrancyGuard {
     uint256 public constant ACCELERATION_PER_BLOCK = 10 wei;
     uint256 public constant MAX_VELOCITY = 1 ether;
-    uint256 public constant LONGEST_ALLOWABLE_BLOCK_CADENCE_FOR_UPDATES = 100;
 
     address public owner;
 
@@ -23,9 +22,13 @@ contract KeepyUppy is ReentrancyGuard {
     EnumerableMap.AddressToUintMap[] private gamePlayerHistory;
     uint256 private currentGameIndex;
 
-    constructor() {
+    // Game parameters
+    uint256 public longestAllowableBlockCadenceForUpdates;
+
+    constructor(uint256 _longestAllowableBlockCadenceForUpdates) {
         owner = msg.sender;
         gamePlayerHistory.push();
+        longestAllowableBlockCadenceForUpdates = _longestAllowableBlockCadenceForUpdates;
     }
 
     modifier onlyOwner() {
@@ -54,7 +57,7 @@ contract KeepyUppy is ReentrancyGuard {
 
     function updateState() external onlyOwner {
         uint256 blocksElapsed = block.number - lastUpdateBlockNumber;
-        if (blocksElapsed > LONGEST_ALLOWABLE_BLOCK_CADENCE_FOR_UPDATES) {
+        if (blocksElapsed > longestAllowableBlockCadenceForUpdates) {
             this.refundPlayers();
         } else {
             (uint256 fallDistance, uint256 newVelocity) = calculateFallDistanceAndNewVelocity(
@@ -72,7 +75,7 @@ contract KeepyUppy is ReentrancyGuard {
 
     function refundPlayers() external nonReentrant {
         uint256 blocksElapsed = block.number - lastUpdateBlockNumber;
-        require(blocksElapsed > LONGEST_ALLOWABLE_BLOCK_CADENCE_FOR_UPDATES);
+        require(blocksElapsed > longestAllowableBlockCadenceForUpdates);
         EnumerableMap.AddressToUintMap storage currentGameContributions = gamePlayerHistory[currentGameIndex];
         for (uint256 i = 0; i < EnumerableMap.length(currentGameContributions); i++) {
             (address player, uint256 totalContributions) = EnumerableMap.at(currentGameContributions, i);
@@ -87,10 +90,10 @@ contract KeepyUppy is ReentrancyGuard {
 
     function calculateFallDistanceAndNewVelocity(uint256 initialVelocity, uint256 blocksElapsed, uint256 acceleration)
         internal
-        pure
+        view
         returns (uint256 fallDistance, uint256 newVelocity)
     {
-        require(blocksElapsed <= LONGEST_ALLOWABLE_BLOCK_CADENCE_FOR_UPDATES);
+        require(blocksElapsed <= longestAllowableBlockCadenceForUpdates);
         if (initialVelocity >= MAX_VELOCITY) {
             initialVelocity = MAX_VELOCITY;
         }

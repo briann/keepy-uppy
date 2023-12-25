@@ -4,12 +4,12 @@ pragma solidity ^0.8.13;
 import {Test, console2} from "lib/forge-std/src/Test.sol";
 import {KeepyUppy} from "src/KeepyUppy.sol";
 
-contract KeepyUppyHarness is KeepyUppy {
+contract KeepyUppyHarness is KeepyUppy(100) {
     function exposed_calculateFallDistanceAndNewVelocity(
         uint256 initialVelocity,
         uint256 blocksElapsed,
         uint256 acceleration
-    ) external pure returns (uint256 fallDistance, uint256 newVelocity) {
+    ) external view returns (uint256 fallDistance, uint256 newVelocity) {
         return calculateFallDistanceAndNewVelocity(initialVelocity, blocksElapsed, acceleration);
     }
 
@@ -121,7 +121,7 @@ contract KeepyUppyTest is Test {
         assertEq(game.balloonHeight(), amount - 5);
 
         // This should refund the player and reset state.
-        vm.roll(blockNumberOfBump + 1 + game.LONGEST_ALLOWABLE_BLOCK_CADENCE_FOR_UPDATES() + 1);
+        vm.roll(blockNumberOfBump + 1 + game.longestAllowableBlockCadenceForUpdates() + 1);
         game.updateState();
         assertEq(player.balance, 1 ether);
         assertGameStateIsReset();
@@ -163,7 +163,7 @@ contract KeepyUppyTest is Test {
         assertEq(player2.balance, 0);
 
         // Refunds should not be allowed at the limit.
-        vm.roll(lastGameUpdateBlock + game.LONGEST_ALLOWABLE_BLOCK_CADENCE_FOR_UPDATES());
+        vm.roll(lastGameUpdateBlock + game.longestAllowableBlockCadenceForUpdates());
         vm.expectRevert();
         game.refundPlayers();
         assertEq(player1.balance, 0);
@@ -186,7 +186,7 @@ contract KeepyUppyTest is Test {
         game.updateState();
 
         // Refunds should be allowed after limit passed.
-        vm.roll(lastGameUpdateBlock + game.LONGEST_ALLOWABLE_BLOCK_CADENCE_FOR_UPDATES() + 1);
+        vm.roll(lastGameUpdateBlock + game.longestAllowableBlockCadenceForUpdates() + 1);
         game.refundPlayers();
         assertEq(player1.balance, 100 ether);
         assertEq(player2.balance, 1 ether);
