@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import {Test, console2} from "lib/forge-std/src/Test.sol";
 import {KeepyUppy} from "src/KeepyUppy.sol";
 
-contract KeepyUppyHarness is KeepyUppy(100) {
+contract KeepyUppyHarness is KeepyUppy(100, 10 wei, 1 ether) {
     function exposed_calculateFallDistanceAndNewVelocity(
         uint256 initialVelocity,
         uint256 blocksElapsed,
@@ -244,16 +244,16 @@ contract KeepyUppyTest is Test {
         uint256 newVelocity;
 
         (fallDistance, newVelocity) = game.exposed_calculateFallDistanceAndNewVelocity(UINT256_MAX - 1, 1, 100);
-        assertEq(fallDistance, game.MAX_VELOCITY());
-        assertEq(newVelocity, game.MAX_VELOCITY());
+        assertEq(fallDistance, game.maxVelocity());
+        assertEq(newVelocity, game.maxVelocity());
 
-        (fallDistance, newVelocity) = game.exposed_calculateFallDistanceAndNewVelocity(game.MAX_VELOCITY() - 1, 1, 2);
-        assertEq(fallDistance, game.MAX_VELOCITY() - 1);
-        assertEq(newVelocity, game.MAX_VELOCITY());
+        (fallDistance, newVelocity) = game.exposed_calculateFallDistanceAndNewVelocity(game.maxVelocity() - 1, 1, 2);
+        assertEq(fallDistance, game.maxVelocity() - 1);
+        assertEq(newVelocity, game.maxVelocity());
 
-        (fallDistance, newVelocity) = game.exposed_calculateFallDistanceAndNewVelocity(game.MAX_VELOCITY() - 1, 2, 1);
-        assertEq(fallDistance, game.MAX_VELOCITY() * 2 - 1);
-        assertEq(newVelocity, game.MAX_VELOCITY());
+        (fallDistance, newVelocity) = game.exposed_calculateFallDistanceAndNewVelocity(game.maxVelocity() - 1, 2, 1);
+        assertEq(fallDistance, game.maxVelocity() * 2 - 1);
+        assertEq(newVelocity, game.maxVelocity());
     }
 
     function test_calculateFallDistanceAndNewVelocity_WithNoAcceleration() public {

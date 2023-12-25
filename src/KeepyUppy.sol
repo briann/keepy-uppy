@@ -6,9 +6,6 @@ import {EnumerableMap} from "lib/openzeppelin-contracts/contracts/utils/structs/
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 contract KeepyUppy is ReentrancyGuard {
-    uint256 public constant ACCELERATION_PER_BLOCK = 10 wei;
-    uint256 public constant MAX_VELOCITY = 1 ether;
-
     address public owner;
 
     // Game state
@@ -24,11 +21,15 @@ contract KeepyUppy is ReentrancyGuard {
 
     // Game parameters
     uint256 public longestAllowableBlockCadenceForUpdates;
+    uint256 public accelerationPerBlock;
+    uint256 public maxVelocity;
 
-    constructor(uint256 _longestAllowableBlockCadenceForUpdates) {
+    constructor(uint256 _longestAllowableBlockCadenceForUpdates, uint256 _accelerationPerBlock, uint256 _maxVelocity) {
         owner = msg.sender;
         gamePlayerHistory.push();
         longestAllowableBlockCadenceForUpdates = _longestAllowableBlockCadenceForUpdates;
+        accelerationPerBlock = _accelerationPerBlock;
+        maxVelocity = _maxVelocity;
     }
 
     modifier onlyOwner() {
@@ -61,7 +62,7 @@ contract KeepyUppy is ReentrancyGuard {
             this.refundPlayers();
         } else {
             (uint256 fallDistance, uint256 newVelocity) = calculateFallDistanceAndNewVelocity(
-                velocity, block.number - lastUpdateBlockNumber, ACCELERATION_PER_BLOCK
+                velocity, block.number - lastUpdateBlockNumber, accelerationPerBlock
             );
             if (fallDistance > balloonHeight) {
                 endGame();
@@ -94,12 +95,12 @@ contract KeepyUppy is ReentrancyGuard {
         returns (uint256 fallDistance, uint256 newVelocity)
     {
         require(blocksElapsed <= longestAllowableBlockCadenceForUpdates);
-        if (initialVelocity >= MAX_VELOCITY) {
-            initialVelocity = MAX_VELOCITY;
+        if (initialVelocity >= maxVelocity) {
+            initialVelocity = maxVelocity;
         }
         newVelocity = initialVelocity + (blocksElapsed * acceleration);
-        if (newVelocity > MAX_VELOCITY) {
-            newVelocity = MAX_VELOCITY;
+        if (newVelocity > maxVelocity) {
+            newVelocity = maxVelocity;
         }
         fallDistance = uint256((initialVelocity + newVelocity) * blocksElapsed / 2);
     }
