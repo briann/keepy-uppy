@@ -4,11 +4,10 @@ pragma solidity ^0.8.13;
 import {console2} from "lib/forge-std/src/console2.sol";
 import {EnumerableMap} from "lib/openzeppelin-contracts/contracts/utils/structs/EnumerableMap.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
-contract KeepyUppy is ReentrancyGuard {
+contract KeepyUppy is ReentrancyGuard, Ownable {
     uint256 public constant MAX_VELOCITY = 1 ether;
-
-    address public owner;
 
     // Game state
     address public lastBumper;
@@ -25,16 +24,10 @@ contract KeepyUppy is ReentrancyGuard {
     uint256 public longestAllowableBlockCadenceForUpdates;
     uint256 public accelerationPerBlock;
 
-    constructor(uint256 _longestAllowableBlockCadenceForUpdates, uint256 _accelerationPerBlock) {
-        owner = msg.sender;
+    constructor(uint256 _longestAllowableBlockCadenceForUpdates, uint256 _accelerationPerBlock) Ownable(msg.sender) {
         gamePlayerHistory.push();
         longestAllowableBlockCadenceForUpdates = _longestAllowableBlockCadenceForUpdates;
         accelerationPerBlock = _accelerationPerBlock;
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Only owner allowed");
-        _;
     }
 
     function bumpBalloon() external payable {
