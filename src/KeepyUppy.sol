@@ -99,8 +99,11 @@ contract KeepyUppy is ReentrancyGuard, Ownable {
     }
 
     function endGame() internal onlyOwner {
-        // TODO: Change to call()
-        payable(lastBumper).transfer(address(this).balance);
+        uint256 payout = address(this).balance;
+        (bool success,) = lastBumper.call{value: payout}("");
+        if (!success) {
+            console2.log("Failed to winner ", address(this), " amount of ", payout);
+        }
         resetGameState();
     }
 
