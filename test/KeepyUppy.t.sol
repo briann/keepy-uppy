@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import {Test, console2} from "lib/forge-std/src/Test.sol";
 import {KeepyUppy} from "src/KeepyUppy.sol";
+import {ReentrantPlayer} from "src/ReentrantPlayer.sol";
 
 contract KeepyUppyHarness is KeepyUppy(100, 10 wei) {
     function exposed_calculateFallDistanceAndNewVelocity(
@@ -193,6 +194,13 @@ contract KeepyUppyTest is Test {
 
         // Game state should be reset.
         assertGameStateIsReset();
+    }
+
+    function test_refundPlayers_DisallowReentrantCalls() public {
+        address player = deployCode("ReentrantPlayer.sol:ReentrantPlayer");
+        playerBumpsBalloon(player, 1 ether, 1);
+        vm.roll(game.longestAllowableBlockCadenceForUpdates() + 2);
+        game.refundPlayers();
     }
 
     // calculateFallDistanceAndNewVelocity()
