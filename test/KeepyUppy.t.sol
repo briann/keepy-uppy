@@ -3,7 +3,6 @@ pragma solidity ^0.8.13;
 
 import {Test, console2} from "lib/forge-std/src/Test.sol";
 import {KeepyUppy} from "src/KeepyUppy.sol";
-import {ReentrantPlayer} from "src/ReentrantPlayer.sol";
 
 contract KeepyUppyHarness is KeepyUppy(100, 10 wei) {
     function exposed_calculateFallDistanceAndNewVelocity(
@@ -16,6 +15,14 @@ contract KeepyUppyHarness is KeepyUppy(100, 10 wei) {
 
     function exposed_endGame() external {
         return endGame();
+    }
+}
+
+contract ReentrantPlayerForTest is Test {
+    receive() external payable {
+        KeepyUppy game = KeepyUppy(msg.sender);
+        vm.expectRevert();
+        game.refundPlayers();
     }
 }
 
@@ -197,10 +204,21 @@ contract KeepyUppyTest is Test {
     }
 
     function test_refundPlayers_DisallowReentrantCalls() public {
-        address player = deployCode("ReentrantPlayer.sol:ReentrantPlayer");
-        playerBumpsBalloon(player, 1 ether, 1);
-        vm.roll(game.longestAllowableBlockCadenceForUpdates() + 2);
+        address reentrantPlayer = deployCode("KeepyUppy.t.sol:ReentrantPlayerForTest");
+        playerBumpsBalloon(reentrantPlayer, 1 ether, 0);
+
+        address player2 = vm.addr(1);
+        playerBumpsBalloon(player2, 2 ether, 0);
+
+        assertEq(address(game).balance, 3 ether);
+
+        vm.roll(game.longestAllowableBlockCadenceForUpdates() + 1);
+        vm.prank(player2);
         game.refundPlayers();
+
+        assertEq(address(game).balance, 0);
+        assertEq(reentrantPlayer.balance, 1 ether);
+        assertEq(player2.balance, 2 ether);
     }
 
     // calculateFallDistanceAndNewVelocity()
